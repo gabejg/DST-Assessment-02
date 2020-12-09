@@ -1,0 +1,7 @@
+1_percent_data.csv.gz - 1 percent of the conn.log data set randomly sampled (approx. 22000 entries) 
+
+1_percent_data_h.csv.gz - First 1 percent of the conn.log data set (using head, hence "h") (approx. 22000 entries) [PREFERRED FOR TIME SERIES]
+
+5_percent_data.csv.gz - 5 percent of the conn.log data set randomly sampled (approx. 1200000 entries)
+
+5_percent_data_h.csv.gz - First 5 percent of the conn.log data set (using head, hence "h") (approx. 1200000 entries)
