@@ -1,5 +1,0 @@
-pkgs=c("lubridate","caTools","naniar","dummies")
-
-for(p in pkgs){
-	if(!require(p,character.only=TRUE)) install.packages(p)
-}
