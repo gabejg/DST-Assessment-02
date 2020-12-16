@@ -14,11 +14,11 @@ Our project is an equal split amongst each project member.
 All Report content is found in the /Report directory and takes the following structure:
 * 01 - Introduction
 * 02 - Data Import
-* 03 - XIAOS DATA
+* 03 - Test Data
 * 04 - Data Analysis
 * 05 - Further DA and Mean Impute
 * 06 - Non Trivial Testing
-* 07 - Missing Forest Model
+* 07 - MissForest Imputation
 * 08 - Performance Analysis
 * 09 - Conclusion
 
