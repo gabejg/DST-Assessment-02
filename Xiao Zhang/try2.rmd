@@ -1,0 +1,36 @@
+```{r}
+setwd("C:\\Users\\xiao\\Documents\\GitHub\\DST-Assessment-02\\Data")
+data_missing<-read.table("test_missing1.csv.gz", sep=",", header=TRUE, na.strings=c("","NA"))
+data_complete<-read.table("test_complete1.csv.gz", sep=",", header=TRUE, na.strings=c("","NA"))
+```
+
+```{r}
+for(i in c(3,5,8,9,10,12,14:17)) data_missing[,i]=as.numeric(data_missing[,i])
+for(i in c(2,4,6,11,13)) data_missing[,i]=as.factor(data_missing[,i])
+
+head(data_missing)
+str(data_missing)
+```
+```{r}
+library("missForest")
+data2<-data_missing[,-which(names(data_missing) %in% c("service","orig_ip","resp_ip","history"))]
+set.seed(81)
+data_imp <- missForest(data2, verbose = TRUE, maxiter = 10, ntree = 10)
+#data_forest<-data_imp$ximp
+```
+
+
+```{r}
+memory.limit(16000000)
+```
+
+
+
+```{r}
+library("VIM")
+aggr(data_missing, prop = TRUE, numbers = TRUE)
+```
+
+
+
+

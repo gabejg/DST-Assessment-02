@@ -1,0 +1,203 @@
+---
+title: "assessment2"
+author: "Xiao"
+output: html_document
+---
+
+```{r}
+setwd("D:\\dst\\data\\assessment2")
+getwd()
+```
+
+```{r}
+library("R.utils")
+library("data.table")
+
+t1 = proc.time()
+data<-fread("conn.log.gz")
+t2 = proc.time()
+t = t2-t1
+print(paste0('time：',t[3][[1]],'s'))
+```
+
+```{r}
+t3 = proc.time()
+data1<-read.table("conn.log.gz")
+t4 = proc.time()
+tt = t4-t3
+print(paste0('time：',tt[3][[1]],'s'))
+```
+
+
+
+
+```{r}
+setwd("D:\\dst\\assessment2")
+conndata<-read.table("1_percent_data.csv.gz", sep=",", header=TRUE, na.strings=c("","NA"))
+```
+
+```{r}
+
+for(i in c(3,5,8,9,10,12,14:17)) conndata[,i]=as.numeric(conndata[,i])
+for(i in c(2,4,6,11,13)) conndata[,i]=as.factor(conndata[,i])
+conndata1<-conndata
+head(conndata1)
+```
+
+```{r}
+str(conndata)
+```
+
+
+
+```{r}
+library("mice")
+md.pattern(conndata)
+```
+```{r}
+library("VIM")
+aggr(conndata, prop = TRUE, numbers = TRUE)
+```
+
+```{r}
+help(aggr)
+```
+
+
+```{r}
+matrixplot(conndata1,sortby = "ts")
+```
+
+
+```{r}
+conndata2<-conndata[,-which(names(conndata) %in% c("service"))]
+#conndata2<-conndata[,-which(names(conndata) %in% c("service","orig_bytes","resp_bytes"))]
+head(conndata2)
+```
+```{r}
+length(table(conndata2$orig_ip))
+length(table(conndata2$resp_ip))
+length(table(conndata2$proto))
+length(table(conndata2$conn_state))
+length(table(conndata2$history))
+```
+
+
+```{r}
+conndata2[,"logduration"]=log(conndata2[,"duration"])
+lm1=lm(logduration~proto+ts+orig_port+resp_port+conn_state+orig_pkts+orig_ip_bytes +resp_pkts+resp_ip_bytes,data=conndata2)
+summary(lm1) 
+```
+
+```{r}
+conn_mean<-conndata2
+conn_mean[is.na(conn_mean[,"logduration"]),
+              "logduration"]=
+    mean(na.omit(conn_mean[,"logduration"]))
+```
+
+```{r}
+lm2=lm(logduration~proto+ts+orig_port+resp_port+conn_state+orig_pkts+orig_ip_bytes +resp_pkts+resp_ip_bytes,data=conn_mean)
+summary(lm2)
+```
+
+
+```{r}
+conn_delete<-conndata2[complete.cases(conndata2),] 
+```
+
+
+```{r}
+lm_delete=lm(logduration~proto+ts+orig_port+resp_port+conn_state+orig_pkts+orig_ip_bytes +resp_pkts+resp_ip_bytes,data=conn_delete)
+summary(lm_delete) 
+```
+
+```{r}
+conndata3<-conndata2[,which(names(conndata2) %in% c("ts","proto","logduration","orig_port","conn_state","orig_pkts"))]
+head(conndata3)
+```
+```{r}
+library("RANN")
+testcols=c("ts",
+           "orig_ip_bytes","resp_ip_bytes",
+           "orig_pkts","resp_pkts")
+
+testdata_all_scaled <- apply(conndata1[,testcols], 2, scale)
+testindices=!is.na(conndata1[,"duration"])
+completedata=conndata1[testindices,]
+testdata_all.svd=svd(testdata_all_scaled[testindices,])
+mapIntoSVD=function(X,svd){
+    Dinv=diag(1/svd$d)
+    X %*% svd$v %*% Dinv
+}
+test=mapIntoSVD(testdata_all_scaled[testindices,],testdata_all.svd)
+newpos=mapIntoSVD(testdata_all_scaled[!testindices,],testdata_all.svd)
+nnres=nn2(test[,1:3],newpos[,1:3],k=5)
+conn_knn=conndata1
+imputedduration=apply(nnres$nn.idx,1,function(x){
+    mean(completedata[x,"duration"])
+})
+conn_knn[is.na(conndata1[,"duration"]),"duration"]=imputedduration
+conn_knn[,"logduration"]=log(conn_knn[,"duration"])
+```
+
+
+```{r}
+lm_knn=lm(logduration~proto+ts+orig_port+resp_port+conn_state+orig_pkts+orig_ip_bytes +resp_pkts+resp_ip_bytes,data=conn_knn)
+summary(lm_knn) 
+```
+
+```{r}
+length(table(conndata$duration))
+length(table(conn_knn$duration))
+```
+
+
+```{r}
+library(DMwR)
+conn_knn<- knnImputation(conndata3,k=3)
+```
+
+```{r}
+pmm<-mice(conndata2,method="pmm")
+#conndata_pmm<-complete(pmm)
+```
+
+```{r}
+library("missForest")
+conndata2<-conndata[,-which(names(conndata) %in% c("service","orig_ip","resp_ip","history"))]
+set.seed(81)
+conn_imp <- missForest(conndata2, verbose = TRUE)
+conn_imp$ximp
+```
+
+
+```{r}
+conn_forest<-conn_imp$ximp
+```
+
+```{r}
+conn_forest[,"logduration"]=log(conn_forest[,"duration"])
+lm_forest=lm(logduration~proto+ts+orig_port+resp_port+conn_state+orig_pkts+orig_ip_bytes +resp_pkts+resp_ip_bytes,data=conn_forest)
+summary(lm_forest)
+```
+
+```{r}
+conn_imp$OOBerror
+```
+
+```{r}
+help(aggr, package="VIM")
+```
+
+```{r}
+library("missForest")
+conndata2<-conndata[,-which(names(conndata) %in% c("service","orig_ip","resp_ip","history"))]
+set.seed(81)
+conn_imp <- missForest(conndata2, verbose = TRUE, ntree = 10)
+```
+
+```{r}
+diagnose(conndata)
+```
+
